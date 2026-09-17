@@ -40,8 +40,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+        # Build from the workflow revision (branch/tag that triggered the run).
+        # Release tag is resolved separately below for asset upload.
 
       - name: Install Linux dependencies
         if: matrix.platform == 'ubuntu-22.04' || matrix.platform == 'ubuntu-22.04-arm'
