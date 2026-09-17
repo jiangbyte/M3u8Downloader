@@ -23,8 +23,9 @@ export default defineConfig({
   },
   envPrefix: ['VITE_', 'TAURI_'],
   build: {
-    target: process.env.TAURI_ENV_PLATFORM === 'windows' ? 'chrome105' : 'safari13',
-    minify: !process.env.TAURI_ENV_DEBUG ? 'esbuild' : false,
+    // Vite 8 / rolldown cannot downlevel modern syntax to safari13.
+    target: ['es2021', 'chrome105', 'safari14'],
+    minify: !process.env.TAURI_ENV_DEBUG,
     sourcemap: !!process.env.TAURI_ENV_DEBUG,
   },
 })
