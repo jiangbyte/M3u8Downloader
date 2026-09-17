@@ -20,6 +20,7 @@
 - [工程结构](#工程结构)
 - [快速开始](#快速开始)
 - [常用命令](#常用命令)
+- [发布](#发布)
 - [ffmpeg](#ffmpeg)
 - [License](#license)
 
@@ -92,7 +93,9 @@ pnpm tauri:dev
 pnpm tauri:build
 ```
 
-产物目标见 `src-tauri/tauri.conf.json`（deb / AppImage / msi / dmg）。
+产物目标见 `src-tauri/tauri.conf.json`（deb / AppImage / msi / nsis / dmg）。
+
+多端安装包由 GitHub Actions 在推送 `v*` 标签时自动构建并上传到 [Releases](https://github.com/jiangbyte/M3u8Downloader/releases)。
 
 ## 常用命令
 
@@ -103,9 +106,23 @@ pnpm tauri:build
 | `pnpm build` | 仅构建前端静态资源 |
 | `pnpm lint` | 前端 lint（oxlint） |
 
+## 发布
+
+1.  bump `package.json` / `src-tauri/tauri.conf.json` / `src-tauri/Cargo.toml` 版本号  
+2. 提交并推送  
+3. 打标签并推送：`git tag vX.Y.Z && git push origin vX.Y.Z`  
+4. Actions 工作流 [Release](.github/workflows/release.yml) 会构建 Windows / macOS / Linux 安装包并写入对应 GitHub Release  
+
+也可在 Actions 中手动 `workflow_dispatch`，填写已有标签（如 `v0.1.0`）重新构建上传。
+
 ## ffmpeg
 
-开发期可直接使用系统 `ffmpeg`。发布打包可将二进制放入 [`src-tauri/binaries/`](src-tauri/binaries/README.md)，并在 `tauri.conf.json` 启用 `externalBin`。
+开发期可直接使用系统 `ffmpeg`。CI 发布构建会下载 sidecar 并写入安装包（见 `scripts/ci-prepare-ffmpeg.sh`）。本地打包如需同样内置：
+
+```bash
+TARGET_TRIPLE=x86_64-unknown-linux-gnu bash scripts/ci-prepare-ffmpeg.sh
+# 然后在 tauri.conf.json 的 bundle.externalBin 中加入 "binaries/ffmpeg"
+```
 
 边下边播优先调用本机 `mpv` / `ffplay` / `vlc`，否则回退系统默认打开方式。
 

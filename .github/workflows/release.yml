@@ -1,0 +1,147 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to build (e.g. v0.1.0). Leave empty to use package version.'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  publish-tauri:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            args: --target aarch64-apple-darwin
+            target: aarch64-apple-darwin
+          - platform: macos-latest
+            args: --target x86_64-apple-darwin
+            target: x86_64-apple-darwin
+          - platform: ubuntu-22.04
+            args: ''
+            target: x86_64-unknown-linux-gnu
+          - platform: ubuntu-22.04-arm
+            args: ''
+            target: aarch64-unknown-linux-gnu
+          - platform: windows-latest
+            args: ''
+            target: x86_64-pc-windows-msvc
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+
+      - name: Install Linux dependencies
+        if: matrix.platform == 'ubuntu-22.04' || matrix.platform == 'ubuntu-22.04-arm'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            xdg-utils \
+            libssl-dev
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: pnpm
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+          shared-key: ${{ matrix.target }}
+
+      - name: Prepare ffmpeg sidecar
+        shell: bash
+        env:
+          TARGET_TRIPLE: ${{ matrix.target }}
+        run: bash scripts/ci-prepare-ffmpeg.sh
+
+      - name: Enable externalBin for ffmpeg
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const path = 'src-tauri/tauri.conf.json';
+          const conf = JSON.parse(fs.readFileSync(path, 'utf8'));
+          conf.bundle = conf.bundle || {};
+          conf.bundle.externalBin = ['binaries/ffmpeg'];
+          fs.writeFileSync(path, JSON.stringify(conf, null, 2) + '\n');
+          console.log('enabled bundle.externalBin =', conf.bundle.externalBin);
+          NODE
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Resolve release tag
+        id: meta
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.tag }}" ]; then
+            TAG="${{ inputs.tag }}"
+          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            TAG="${GITHUB_REF_NAME}"
+          else
+            VER=$(node -p "require('./package.json').version")
+            TAG="v${VER}"
+          fi
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "Using release tag: ${TAG}"
+
+      - name: Build and upload release assets
+        uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ steps.meta.outputs.tag }}
+          releaseName: ${{ steps.meta.outputs.tag }}
+          releaseBody: |
+            ## 下载
+
+            请按系统选择对应安装包：
+
+            | 平台 | 架构 | 包格式 |
+            | --- | --- | --- |
+            | Windows | x64 | `.msi` / `.exe`（NSIS） |
+            | macOS | Apple Silicon | `.dmg` |
+            | macOS | Intel | `.dmg` |
+            | Linux | x64 / ARM64 | `.deb` / `.AppImage` |
+
+            ## 说明
+
+            - 安装包已内置 `ffmpeg` sidecar，用于 TS → MP4 合并
+            - 边下边播优先使用本机 `mpv` / `ffplay` / `vlc`，否则回退系统默认打开方式
+            - macOS 未签名时，首次打开可能需在「隐私与安全性」中允许
+
+            ## 变更摘要
+
+            跨平台 M3U8 多线程下载器：AES-128、任务/分片控制、断点续传、边下边播、ffmpeg remux。
+          releaseDraft: false
+          prerelease: false
+          args: ${{ matrix.args }}
