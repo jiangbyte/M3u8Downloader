@@ -42,7 +42,7 @@
 | 桌面壳 | Tauri 2 |
 | 下载引擎 | Rust · Tokio · reqwest |
 | 前端 | React 19 · TypeScript · Vite · Ant Design |
-| 合并 | 安装包内置 ffmpeg sidecar（开发可用系统 PATH） |
+| 合并 | ffmpeg（安装包内置） |
 
 ## 工程结构
 
@@ -61,7 +61,7 @@ M3u8Downloader/
 │   │   ├── play/             # 边下边播本地 HLS
 │   │   ├── task/             # 任务状态与持久化
 │   │   └── commands.rs       # Tauri commands
-│   └── binaries/             # 构建时自动下载的 ffmpeg sidecar
+│   └── binaries/             # 打包用 ffmpeg
 └── scripts/prepare-ffmpeg.mjs
 ```
 
@@ -77,8 +77,6 @@ M3u8Downloader/
 sudo apt install libwebkit2gtk-4.1-dev librsvg2-dev patchelf \
   libssl-dev libayatana-appindicator3-dev
 ```
-
-> 发布安装包已内置 ffmpeg。本地 `tauri:dev` 若需合并，可另装系统 `ffmpeg`，或先执行 `pnpm prepare:ffmpeg`。
 
 ### 启动
 
