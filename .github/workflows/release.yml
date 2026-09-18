@@ -123,13 +123,15 @@ jobs:
 
             ## 说明
 
-            - **安装包已内置 ffmpeg**，安装即可合并 MP4，无需自行下载或配置
+            - 支持 ffmpeg 合并 MP4
             - 边下边播优先使用本机 `mpv` / `ffplay` / `vlc`，否则回退系统默认打开方式
             - macOS 未签名时，首次打开可能需在「隐私与安全性」中允许
 
             ## 变更摘要
 
-            跨平台 M3U8 多线程下载器：AES-128、任务/分片控制、断点续传、边下边播、ffmpeg remux。
+            - 各平台安装包附带 ffmpeg，开箱即可合并
+            - 默认分支切换为 `main`
+            - README 与发行说明整理
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}

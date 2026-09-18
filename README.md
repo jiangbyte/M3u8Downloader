@@ -7,11 +7,11 @@
 ![Ant Design](https://img.shields.io/badge/UI-Ant%20Design-0170FE?logo=antdesign&logoColor=white)
 ![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
 ![License](https://img.shields.io/badge/License-MIT-green)
-![Version](https://img.shields.io/badge/version-0.1.0-orange)
+![Version](https://img.shields.io/badge/version-0.1.1-orange)
 
 **M3U8 Downloader** 是一款跨平台桌面端 m3u8 多线程下载器：支持可选 AES-128 解密、自定义请求头 / Cookie / 代理，任务级与分片级控制，下载完成后自动 remux 为 MP4，并支持边下边播。
 
-> 当前版本：`0.1.0` · 协议：[MIT License](LICENSE)
+> 当前版本：`0.1.1` · 协议：[MIT License](LICENSE)
 
 ## 目录
 
