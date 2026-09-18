@@ -33,7 +33,7 @@
 | 任务管理 | 多任务队列；暂停 / 继续 / 取消 / 删除；按已下分片断点续传 |
 | 分片控制 | 任务详情中单独开始 / 停止 / 重试分片；任务级操作会中断在途下载 |
 | 边下边播 | 基于本地 HLS 服务播放已连续下载的分片；完成后可直接打开 MP4 |
-| 合并输出 | 安装包内置 ffmpeg，`-c copy` 将 TS remux 为 MP4；可选清理临时分片 |
+| 合并输出 | 使用 ffmpeg 将 TS remux 为 MP4（`-c copy`）；可选清理临时分片 |
 
 ## 技术栈
 
@@ -42,7 +42,7 @@
 | 桌面壳 | Tauri 2 |
 | 下载引擎 | Rust · Tokio · reqwest |
 | 前端 | React 19 · TypeScript · Vite · Ant Design |
-| 合并 | ffmpeg（安装包内置） |
+| 合并 | ffmpeg |
 
 ## 工程结构
 
@@ -100,19 +100,13 @@ pnpm tauri:build
 | 命令 | 说明 |
 | --- | --- |
 | `pnpm tauri:dev` | 开发模式启动桌面应用 |
-| `pnpm tauri:build` | 构建发布包（自动下载并内置 ffmpeg） |
-| `pnpm prepare:ffmpeg` | 仅下载当前平台 ffmpeg sidecar |
+| `pnpm tauri:build` | 构建发布包 |
 | `pnpm build` | 仅构建前端静态资源 |
 | `pnpm lint` | 前端 lint（oxlint） |
 
 ## ffmpeg
 
-**Windows / macOS / Linux 安装包均已内置静态 ffmpeg**，安装后即可合并 MP4，无需用户自行下载或放置。
-
-本地开发：
-
-- `pnpm tauri:dev`：优先使用系统 PATH 中的 `ffmpeg`
-- `pnpm tauri:build`：构建前自动执行 `scripts/prepare-ffmpeg.mjs` 并打包进安装程序
+支持使用 ffmpeg 将分片合并为 MP4。
 
 边下边播优先调用本机 `mpv` / `ffplay` / `vlc`，否则回退系统默认打开方式。
 
