@@ -3,42 +3,75 @@ use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use tokio::process::Command;
 
-/// Resolve ffmpeg binary: bundled sidecar near the executable, then PATH.
+/// Resolve bundled ffmpeg first (installer sidecar), then PATH fallback for dev.
 pub fn resolve_ffmpeg() -> AppResult<PathBuf> {
-    if let Ok(exe) = std::env::current_exe() {
-        if let Some(dir) = exe.parent() {
-            for name in ["ffmpeg", "ffmpeg.exe"] {
-                let candidate = dir.join(name);
-                if candidate.is_file() {
-                    return Ok(candidate);
-                }
+    if let Some(p) = find_bundled_ffmpeg() {
+        return Ok(p);
+    }
+    which_ffmpeg().ok_or_else(|| {
+        AppError::msg(
+            "未找到 ffmpeg。安装版应已内置；开发环境请安装系统 ffmpeg，或运行 node scripts/prepare-ffmpeg.mjs 后重新打包",
+        )
+    })
+}
+
+fn find_bundled_ffmpeg() -> Option<PathBuf> {
+    let exe = std::env::current_exe().ok()?;
+    let mut dirs = Vec::new();
+    if let Some(dir) = exe.parent() {
+        dirs.push(dir.to_path_buf());
+        // macOS .app: Contents/MacOS → Contents/Resources / Contents
+        if let Some(contents) = dir.parent() {
+            dirs.push(contents.join("Resources"));
+            dirs.push(contents.to_path_buf());
+            if let Some(app_root) = contents.parent() {
+                dirs.push(app_root.to_path_buf());
             }
-            // Tauri sidecar naming: binary-name-target-triple
-            if let Ok(rd) = std::fs::read_dir(dir) {
-                for entry in rd.flatten() {
-                    let name = entry.file_name().to_string_lossy().to_string();
-                    if name.starts_with("ffmpeg") {
-                        return Ok(entry.path());
-                    }
-                }
+        }
+        dirs.push(dir.join("binaries"));
+    }
+
+    let names = [
+        "ffmpeg",
+        "ffmpeg.exe",
+        // Keep triple-suffixed names for unpackaged / side-by-side layouts
+        "ffmpeg-x86_64-unknown-linux-gnu",
+        "ffmpeg-aarch64-unknown-linux-gnu",
+        "ffmpeg-x86_64-apple-darwin",
+        "ffmpeg-aarch64-apple-darwin",
+        "ffmpeg-x86_64-pc-windows-msvc.exe",
+    ];
+
+    for dir in &dirs {
+        for name in names {
+            let candidate = dir.join(name);
+            if is_executable_file(&candidate) {
+                return Some(candidate);
             }
-            let binaries = dir.join("binaries");
-            if binaries.is_dir() {
-                for name in ["ffmpeg", "ffmpeg.exe"] {
-                    let candidate = binaries.join(name);
-                    if candidate.is_file() {
-                        return Ok(candidate);
+        }
+        if let Ok(rd) = std::fs::read_dir(dir) {
+            for entry in rd.flatten() {
+                let name = entry.file_name().to_string_lossy().to_string();
+                if name == "ffmpeg"
+                    || name == "ffmpeg.exe"
+                    || (name.starts_with("ffmpeg-") && !name.contains("ffprobe"))
+                {
+                    let p = entry.path();
+                    if is_executable_file(&p) {
+                        return Some(p);
                     }
                 }
             }
         }
     }
+    None
+}
 
-    which_ffmpeg().ok_or_else(|| {
-        AppError::msg(
-            "ffmpeg not found. Install ffmpeg or place a binary next to the app / in src-tauri/binaries/",
-        )
-    })
+fn is_executable_file(path: &Path) -> bool {
+    match std::fs::metadata(path) {
+        Ok(m) if m.is_file() && m.len() > 0 => true,
+        _ => false,
+    }
 }
 
 fn which_ffmpeg() -> Option<PathBuf> {
@@ -46,7 +79,7 @@ fn which_ffmpeg() -> Option<PathBuf> {
     for dir in std::env::split_paths(&path_var) {
         for name in ["ffmpeg", "ffmpeg.exe"] {
             let p = dir.join(name);
-            if p.is_file() {
+            if is_executable_file(&p) {
                 return Some(p);
             }
         }
@@ -92,7 +125,9 @@ pub async fn merge_segments_to_mp4(
             "copy",
             "-bsf:a",
             "aac_adtstoasc",
-            output.to_str().ok_or_else(|| AppError::msg("Invalid output path"))?,
+            output
+                .to_str()
+                .ok_or_else(|| AppError::msg("Invalid output path"))?,
         ])
         .stdin(Stdio::null())
         .stdout(Stdio::null())

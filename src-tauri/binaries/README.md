@@ -1,22 +1,15 @@
-# ffmpeg sidecar
+# ffmpeg sidecar（安装包内置）
 
-Place platform-named ffmpeg binaries here for bundling with Tauri `externalBin`:
+构建时由 `node scripts/prepare-ffmpeg.mjs` 自动下载对应平台的**静态** ffmpeg，经 Tauri `bundle.externalBin` 打进安装包。
 
-- Linux: `ffmpeg-x86_64-unknown-linux-gnu`
+用户安装后即可合并 MP4，**无需**自行寻找或配置 ffmpeg。
+
+开发调试可用系统 PATH 中的 `ffmpeg`；打包前脚本会按目标平台拉取 sidecar。
+
+文件命名（gitignore，不入库）：
+
+- Linux x64: `ffmpeg-x86_64-unknown-linux-gnu`
+- Linux ARM64: `ffmpeg-aarch64-unknown-linux-gnu`
 - macOS Intel: `ffmpeg-x86_64-apple-darwin`
-- macOS ARM: `ffmpeg-aarch64-apple-darwin`
-- Windows: `ffmpeg-x86_64-pc-windows-msvc.exe`
-
-At runtime the app also falls back to `ffmpeg` on `PATH` if no sidecar is found.
-
-Download static builds from https://ffmpeg.org/download.html or trusted static builds (e.g. johnvansickle / BtbN).
-
-After placing binaries, add to `tauri.conf.json`:
-
-```json
-"bundle": {
-  "externalBin": ["binaries/ffmpeg"]
-}
-```
-
-(Tauri renames `binaries/ffmpeg` to the target-triple form automatically at build time.)
+- macOS Apple Silicon: `ffmpeg-aarch64-apple-darwin`
+- Windows x64: `ffmpeg-x86_64-pc-windows-msvc.exe`

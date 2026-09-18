@@ -42,7 +42,7 @@
 | 桌面壳 | Tauri 2 |
 | 下载引擎 | Rust · Tokio · reqwest |
 | 前端 | React 19 · TypeScript · Vite · Ant Design |
-| 合并 | ffmpeg（系统 PATH 或 sidecar） |
+| 合并 | 安装包内置 ffmpeg sidecar（开发可用系统 PATH） |
 
 ## 工程结构
 
@@ -61,8 +61,8 @@ M3u8Downloader/
 │   │   ├── play/             # 边下边播本地 HLS
 │   │   ├── task/             # 任务状态与持久化
 │   │   └── commands.rs       # Tauri commands
-│   └── binaries/             # 可选打包用 ffmpeg 说明
-└── package.json
+│   └── binaries/             # 构建时自动下载的 ffmpeg sidecar
+└── scripts/prepare-ffmpeg.mjs
 ```
 
 ## 快速开始
@@ -71,13 +71,14 @@ M3u8Downloader/
 
 - Node.js（建议配合 pnpm）
 - Rust / Cargo（建议放在 `~/workspace/sdks`，见 `Rust安装记录.md` / `environment.d/rust.conf`）
-- 系统 ffmpeg（开发期推荐）
 - Linux 还需 Tauri 系统依赖，例如：
 
 ```bash
 sudo apt install libwebkit2gtk-4.1-dev librsvg2-dev patchelf \
-  libssl-dev libayatana-appindicator3-dev ffmpeg
+  libssl-dev libayatana-appindicator3-dev
 ```
+
+> 发布安装包已内置 ffmpeg。本地 `tauri:dev` 若需合并，可另装系统 `ffmpeg`，或先执行 `pnpm prepare:ffmpeg`。
 
 ### 启动
 
@@ -101,18 +102,19 @@ pnpm tauri:build
 | 命令 | 说明 |
 | --- | --- |
 | `pnpm tauri:dev` | 开发模式启动桌面应用 |
-| `pnpm tauri:build` | 构建发布包 |
+| `pnpm tauri:build` | 构建发布包（自动下载并内置 ffmpeg） |
+| `pnpm prepare:ffmpeg` | 仅下载当前平台 ffmpeg sidecar |
 | `pnpm build` | 仅构建前端静态资源 |
 | `pnpm lint` | 前端 lint（oxlint） |
 
 ## ffmpeg
 
-开发期可直接使用系统 `ffmpeg`。发布安装包已内置 ffmpeg sidecar。本地打包如需同样内置：
+**Windows / macOS / Linux 安装包均已内置静态 ffmpeg**，安装后即可合并 MP4，无需用户自行下载或放置。
 
-```bash
-TARGET_TRIPLE=x86_64-unknown-linux-gnu bash scripts/ci-prepare-ffmpeg.sh
-# 然后在 tauri.conf.json 的 bundle.externalBin 中加入 "binaries/ffmpeg"
-```
+本地开发：
+
+- `pnpm tauri:dev`：优先使用系统 PATH 中的 `ffmpeg`
+- `pnpm tauri:build`：构建前自动执行 `scripts/prepare-ffmpeg.mjs` 并打包进安装程序
 
 边下边播优先调用本机 `mpv` / `ffplay` / `vlc`，否则回退系统默认打开方式。
 

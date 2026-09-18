@@ -81,20 +81,8 @@ jobs:
         shell: bash
         env:
           TARGET_TRIPLE: ${{ matrix.target }}
-        run: bash scripts/ci-prepare-ffmpeg.sh
-
-      - name: Enable externalBin for ffmpeg
-        shell: bash
-        run: |
-          node <<'NODE'
-          const fs = require('fs');
-          const path = 'src-tauri/tauri.conf.json';
-          const conf = JSON.parse(fs.readFileSync(path, 'utf8'));
-          conf.bundle = conf.bundle || {};
-          conf.bundle.externalBin = ['binaries/ffmpeg'];
-          fs.writeFileSync(path, JSON.stringify(conf, null, 2) + '\n');
-          console.log('enabled bundle.externalBin =', conf.bundle.externalBin);
-          NODE
+          FORCE_FFMPEG: '1'
+        run: node scripts/prepare-ffmpeg.mjs
 
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
@@ -135,7 +123,7 @@ jobs:
 
             ## 说明
 
-            - 安装包已内置 `ffmpeg` sidecar，用于 TS → MP4 合并
+            - **安装包已内置 ffmpeg**，安装即可合并 MP4，无需自行下载或配置
             - 边下边播优先使用本机 `mpv` / `ffplay` / `vlc`，否则回退系统默认打开方式
             - macOS 未签名时，首次打开可能需在「隐私与安全性」中允许
 
